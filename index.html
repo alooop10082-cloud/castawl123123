@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#081522" />
+  <meta name="description" content="Пиксельное портфолио в формате ночной витрины." />
+  <title>PIXEL SHOP // PORTFOLIO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="./js/app.js"></script>
+</head>
+<body>
+  <div class="crt" aria-hidden="true"></div>
+  <main id="app" class="app-shell">
+    <section id="home-view" class="view view-home is-active" aria-label="Главное меню">
+      <div class="scene" id="scene">
+        <div class="scene-label" id="scene-label" aria-live="polite"></div>
+        <button class="hotspot hotspot-phone" data-category="contacts" aria-label="Открыть Контакты"><img src="./assets/icon1.png" alt="Телефон" /></button>
+        <button class="hotspot hotspot-posters" data-category="posters" aria-label="Открыть Плакаты"><img src="./assets/icon2.png" alt="Плакаты" /></button>
+        <button class="hotspot hotspot-clothes" data-category="clothes" aria-label="Открыть Одежда"><img src="./assets/icon3.png" alt="Одежда" /></button>
+        <button class="hotspot hotspot-design" data-category="design" aria-label="Открыть Оформление и инфографика"><img src="./assets/icon4.png" alt="Компьютер" /></button>
+        <button class="character-trigger" id="character-trigger" aria-label="Персонаж. Тройной клик открывает админ-панель"><img src="./assets/main.png" alt="Персонаж" /></button>
+        <div class="speech-bubble" id="speech-bubble" role="status"></div>
+        <div class="scene-hint">CLICK OBJECT TO ENTER</div>
+      </div>
+    </section>
+
+    <section id="catalog-view" class="view panel-view" aria-labelledby="catalog-title" hidden>
+      <div class="panel-frame">
+        <div class="panel-top"><button class="pixel-button" data-back>← НАЗАД</button><span class="status-light">● ONLINE</span></div>
+        <header class="section-heading"><p class="eyebrow">ARCHIVE // 00<span id="category-number">1</span></p><h1 id="catalog-title">Плакаты</h1><p id="catalog-subtitle">Витрина избранных работ</p></header>
+        <div class="works-grid" id="works-grid"></div>
+      </div>
+    </section>
+
+    <section id="contacts-view" class="view panel-view" aria-labelledby="contacts-title" hidden>
+      <div class="panel-frame contacts-frame">
+        <div class="panel-top"><button class="pixel-button" data-back>← НАЗАД</button><span class="status-light">● OPEN LINE</span></div>
+        <header class="section-heading"><p class="eyebrow">DIRECT CHANNEL</p><h1 id="contacts-title">Контакты</h1><p>Связаться с автором портфолио</p></header>
+        <div id="contacts-list" class="contacts-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal" id="work-modal" hidden aria-modal="true" role="dialog" aria-labelledby="modal-title">
+    <div class="modal-card"><button class="modal-close" data-close-modal aria-label="Закрыть">×</button><div id="modal-gallery" class="modal-gallery"></div><div class="modal-copy"><p class="eyebrow">WORK FILE</p><h2 id="modal-title"></h2><p id="modal-description"></p></div></div>
+  </div>
+
+  <div class="modal admin-modal" id="admin-modal" hidden aria-modal="true" role="dialog" aria-labelledby="admin-title">
+    <div class="admin-card"><button class="modal-close" data-close-admin aria-label="Закрыть">×</button><p class="eyebrow">RESTRICTED AREA</p><h2 id="admin-title">ADMIN CONSOLE</h2><div id="admin-content"></div></div>
+  </div>
+</body>
+</html>
