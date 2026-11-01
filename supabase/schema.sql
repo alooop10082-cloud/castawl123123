@@ -40,6 +40,7 @@ do $$ begin
   create policy "public read images" on public.work_images for select using (true);
   create policy "public read phrases" on public.phrases for select using (true);
   create policy "public read contacts" on public.contacts for select using (true);
+  create policy "public read menu settings" on public.settings for select using (key = 'menu_positions');
   create policy "admin manage categories" on public.categories for all using (public.is_admin()) with check (public.is_admin());
   create policy "admin manage works" on public.works for all using (public.is_admin()) with check (public.is_admin());
   create policy "admin manage images" on public.work_images for all using (public.is_admin()) with check (public.is_admin());
@@ -47,6 +48,9 @@ do $$ begin
   create policy "admin manage contacts" on public.contacts for all using (public.is_admin()) with check (public.is_admin());
   create policy "admin manage settings" on public.settings for all using (public.is_admin()) with check (public.is_admin());
 exception when duplicate_object then null; end $$;
+
+drop policy if exists "public read menu settings" on public.settings;
+create policy "public read menu settings" on public.settings for select using (key = 'menu_positions');
 
 insert into storage.buckets (id, name, public) values ('portfolio', 'portfolio', true) on conflict (id) do update set public = true;
 do $$ begin

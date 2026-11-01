@@ -1,4 +1,4 @@
-import { loadPortfolio, imageUrl, fallbackCategories, fallbackPhrases } from './supabase.js';
+import { loadPortfolio, imageUrl, fallbackCategories, fallbackPhrases, defaultMenuPositions } from './supabase.js';
 import { openAdmin } from './admin.js';
 
 const state = { data: null, currentCategory: null, cardIndexes: {}, modalWork: null, modalIndex: 0, typingTimer: null, bubbleTimer: null, hoverSlug: null };
@@ -19,6 +19,15 @@ function closeModal() { $('#work-modal').hidden = true; state.modalWork = null; 
 function escapeHtml(value='') { return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char])); }
 const escapeAttr = escapeHtml;
 
+function applyMenuPositions(positions = defaultMenuPositions) {
+  Object.entries(positions).forEach(([slug, position]) => {
+    const button = $(`.hotspot[data-category="${slug}"]`);
+    if (!button || !position) return;
+    if (Number.isFinite(Number(position.left))) button.style.left = `${Number(position.left)}%`;
+    if (Number.isFinite(Number(position.top))) button.style.top = `${Number(position.top)}%`;
+  });
+}
+
 $$('.hotspot').forEach(button => { const slug = button.dataset.category; button.addEventListener('mouseenter', () => setHover(slug, true)); button.addEventListener('focus', () => setHover(slug, true)); button.addEventListener('mouseleave', () => setHover(slug, false)); button.addEventListener('blur', () => setHover(slug, false)); button.addEventListener('click', () => slug === 'contacts' ? (renderContacts(), showView('contacts')) : renderCatalog(slug)); });
 $('#character-trigger').addEventListener('click', event => { if (event.detail === 3) openAdmin(); });
 $$('[data-back]').forEach(button => button.addEventListener('click', () => showView('home')));
@@ -27,5 +36,5 @@ $('#work-modal').addEventListener('click', event => { if (event.target.id === 'w
 $('#works-grid').addEventListener('click', event => { const card = event.target.closest('.work-card'); if (!card) return; const work = (state.data.works[state.currentCategory] || []).find(item => item.id === card.dataset.workId); if (!work) return; if (event.target.matches('[data-card-prev],[data-card-next]')) { const count = work.images?.length || 1; const currentIndex = Number.isInteger(state.cardIndexes[work.id]) ? state.cardIndexes[work.id] : 0; state.cardIndexes[work.id] = (currentIndex + (event.target.matches('[data-card-next]') ? 1 : -1) + count) % count; renderCatalog(state.currentCategory); return; } openWork(work); });
 window.addEventListener('keydown', event => { if (event.key === 'Escape') { closeModal(); $('#admin-modal').hidden = true; document.body.style.overflow = ''; } });
 
-async function init() { try { state.data = await loadPortfolio(); } catch (error) { console.warn('Supabase load failed; using fallback data.', error); state.data = { categories: fallbackCategories, works: {}, phrases: fallbackPhrases, contacts: [] }; } renderContacts(); }
+async function init() { try { state.data = await loadPortfolio(); } catch (error) { console.warn('Supabase load failed; using fallback data.', error); state.data = { categories: fallbackCategories, works: {}, phrases: fallbackPhrases, contacts: [], menuPositions: defaultMenuPositions }; } applyMenuPositions(state.data.menuPositions); renderContacts(); }
 init();

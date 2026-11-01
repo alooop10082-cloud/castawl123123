@@ -26,15 +26,22 @@ export const fallbackWorks = {
   design: [{ id: 'demo-design', category_id: 'design', title: 'Interface 01', description: 'Экранная композиция, где информация светится как вывеска.', images: [{ id: 'demo-design-img', storage_path: 'assets/icon4.png', sort_order: 1 }] }]
 };
 export const fallbackContacts = cfg.fallbackContacts || [];
+export const defaultMenuPositions = {
+  contacts: { left: 23.1, top: 35.8 },
+  posters: { left: 46.5, top: 34 },
+  clothes: { left: 18.8, top: 48.5 },
+  design: { left: 35.4, top: 46.5 }
+};
 
 export async function loadPortfolio() {
   if (!client) return { categories: fallbackCategories, works: fallbackWorks, phrases: fallbackPhrases, contacts: fallbackContacts };
-  const [categories, works, images, phrases, contacts] = await Promise.all([
+  const [categories, works, images, phrases, contacts, settings] = await Promise.all([
     client.from('categories').select('*').order('sort_order'),
     client.from('works').select('*').order('sort_order'),
     client.from('work_images').select('*').order('sort_order'),
     client.from('phrases').select('*'),
-    client.from('contacts').select('*').order('sort_order')
+    client.from('contacts').select('*').order('sort_order'),
+    client.from('settings').select('key,value').eq('key', 'menu_positions').maybeSingle()
   ]);
   if (categories.error) throw categories.error;
   const categorySlugs = Object.fromEntries((categories.data || []).map(item => [item.id, item.slug]));
@@ -42,7 +49,12 @@ export async function loadPortfolio() {
   (works.data || []).forEach(work => { const slug = categorySlugs[work.category_id] || work.category_id; groupedWorks[slug] ||= []; groupedWorks[slug].push({ ...work, images: (images.data || []).filter(image => image.work_id === work.id) }); });
   const groupedPhrases = {};
   (phrases.data || []).forEach(phrase => { const key = phrase.icon_slug || phrase.category_id; groupedPhrases[key] ||= []; groupedPhrases[key].push(phrase.text); });
-  return { categories: categories.data || [], works: groupedWorks, phrases: groupedPhrases, contacts: contacts.data || [] };
+  return { categories: categories.data || [], works: groupedWorks, phrases: groupedPhrases, contacts: contacts.data || [], menuPositions: settings.data?.value || defaultMenuPositions };
+}
+
+export async function saveMenuPositions(positions) {
+  if (!client) throw new Error('Supabase не настроен.');
+  return client.from('settings').upsert({ key: 'menu_positions', value: positions });
 }
 
 export function imageUrl(path) {
