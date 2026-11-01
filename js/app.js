@@ -25,6 +25,7 @@ function applyMenuPositions(positions = defaultMenuPositions) {
     if (!button || !position) return;
     if (Number.isFinite(Number(position.left))) button.style.left = `${Number(position.left)}%`;
     if (Number.isFinite(Number(position.top))) button.style.top = `${Number(position.top)}%`;
+    if (Number.isFinite(Number(position.scale))) button.style.setProperty('--scale', String(Math.max(.5, Math.min(2, Number(position.scale)))));
   });
 }
 

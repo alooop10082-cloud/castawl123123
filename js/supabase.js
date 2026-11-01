@@ -27,11 +27,11 @@ export const fallbackWorks = {
 };
 export const fallbackContacts = cfg.fallbackContacts || [];
 export const defaultMenuPositions = {
-  contacts: { left: 23.1, top: 35.8 },
-  posters: { left: 46.5, top: 34 },
-  clothes: { left: 18.8, top: 48.5 },
-  design: { left: 35.4, top: 46.5 },
-  character: { left: 60, top: 33 }
+  contacts: { left: 23.1, top: 35.8, scale: 1 },
+  posters: { left: 46.5, top: 34, scale: 1 },
+  clothes: { left: 18.8, top: 48.5, scale: 1 },
+  design: { left: 35.4, top: 46.5, scale: 1 },
+  character: { left: 60, top: 33, scale: 1 }
 };
 
 export async function loadPortfolio() {
