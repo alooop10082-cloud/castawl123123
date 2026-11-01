@@ -30,7 +30,10 @@ function applyMenuPositions(positions = defaultMenuPositions) {
     if (Number.isFinite(Number(position.scale))) button.style.setProperty('--scale', String(Math.max(.5, Math.min(2, Number(position.scale)))));
   });
   const scene = $('#scene');
-  const background = positions?.backgroundScale || {};
+  const backgroundSettings = positions?.backgroundScale || {};
+  const background = backgroundSettings.desktop || backgroundSettings.mobile
+    ? (backgroundSettings[touchLayout ? 'mobile' : 'desktop'] || { x: 100, y: 100 })
+    : backgroundSettings;
   scene.style.setProperty('--bg-x', `${Math.max(50, Math.min(200, Number(background.x) || 100))}%`);
   scene.style.setProperty('--bg-y', `${Math.max(50, Math.min(200, Number(background.y) || 100))}%`);
   const label = $('#scene-label');
