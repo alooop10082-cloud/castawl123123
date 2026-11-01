@@ -30,7 +30,25 @@ function applyMenuPositions(positions = defaultMenuPositions) {
 }
 
 $$('.hotspot').forEach(button => { const slug = button.dataset.category; button.addEventListener('mouseenter', () => setHover(slug, true)); button.addEventListener('focus', () => setHover(slug, true)); button.addEventListener('mouseleave', () => setHover(slug, false)); button.addEventListener('blur', () => setHover(slug, false)); button.addEventListener('click', () => slug === 'contacts' ? (renderContacts(), showView('contacts')) : renderCatalog(slug)); });
-$('#character-trigger').addEventListener('click', event => { if (event.detail === 3) openAdmin(); });
+const characterTrigger = $('#character-trigger');
+let longPressTimer;
+let touchTapCount = 0;
+let touchTapTimer;
+characterTrigger.addEventListener('click', event => { if (event.detail === 3) openAdmin(); });
+characterTrigger.addEventListener('pointerdown', event => {
+  if (event.pointerType !== 'mouse') longPressTimer = setTimeout(() => openAdmin(), 700);
+});
+characterTrigger.addEventListener('pointerup', event => {
+  clearTimeout(longPressTimer);
+  if (event.pointerType === 'touch') {
+    touchTapCount += 1;
+    clearTimeout(touchTapTimer);
+    if (touchTapCount >= 3) { touchTapCount = 0; openAdmin(); }
+    else touchTapTimer = setTimeout(() => { touchTapCount = 0; }, 900);
+  }
+});
+['pointercancel', 'pointerleave'].forEach(type => characterTrigger.addEventListener(type, () => clearTimeout(longPressTimer)));
+$('#mobile-admin-access')?.addEventListener('click', openAdmin);
 $$('[data-back]').forEach(button => button.addEventListener('click', () => showView('home')));
 $('[data-close-modal]').addEventListener('click', closeModal);
 $('#work-modal').addEventListener('click', event => { if (event.target.id === 'work-modal') closeModal(); if (event.target.matches('[data-modal-prev],[data-modal-next]')) { const images = state.modalWork?.images || []; state.modalIndex = (state.modalIndex + (event.target.matches('[data-modal-next]') ? 1 : -1) + images.length) % images.length; renderModal(); } });
