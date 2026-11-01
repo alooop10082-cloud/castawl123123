@@ -1,7 +1,7 @@
 import { loadPortfolio, imageUrl, fallbackCategories, fallbackPhrases, defaultMenuPositions } from './supabase.js';
 import { openAdmin } from './admin.js';
 
-const state = { data: null, currentCategory: null, cardIndexes: {}, modalWork: null, modalIndex: 0, typingTimer: null, bubbleTimer: null, hoverSlug: null };
+const state = { data: null, currentCategory: null, cardIndexes: {}, modalWork: null, modalIndex: 0, typingTimer: null, bubbleTimer: null, hoverSlug: null, mobileNavigateTimer: null };
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const views = { home: $('#home-view'), catalog: $('#catalog-view'), contacts: $('#contacts-view') };
@@ -29,7 +29,21 @@ function applyMenuPositions(positions = defaultMenuPositions) {
   });
 }
 
-$$('.hotspot').forEach(button => { const slug = button.dataset.category; button.addEventListener('mouseenter', () => setHover(slug, true)); button.addEventListener('focus', () => setHover(slug, true)); button.addEventListener('mouseleave', () => setHover(slug, false)); button.addEventListener('blur', () => setHover(slug, false)); button.addEventListener('click', () => slug === 'contacts' ? (renderContacts(), showView('contacts')) : renderCatalog(slug)); });
+const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+function enterCategory(slug) { if (slug === 'contacts') { renderContacts(); showView('contacts'); } else renderCatalog(slug); }
+$$('.hotspot').forEach(button => {
+  const slug = button.dataset.category;
+  button.addEventListener('mouseenter', () => setHover(slug, true));
+  button.addEventListener('focus', () => setHover(slug, true));
+  button.addEventListener('mouseleave', () => { if (!isTouchDevice()) setHover(slug, false); });
+  button.addEventListener('blur', () => { if (!isTouchDevice()) setHover(slug, false); });
+  button.addEventListener('click', () => {
+    if (!isTouchDevice()) return enterCategory(slug);
+    clearTimeout(state.mobileNavigateTimer);
+    setHover(slug, true);
+    state.mobileNavigateTimer = setTimeout(() => { setHover(slug, false); enterCategory(slug); }, 1500);
+  });
+});
 const characterTrigger = $('#character-trigger');
 let longPressTimer;
 let touchTapCount = 0;
