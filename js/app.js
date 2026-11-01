@@ -21,7 +21,7 @@ const escapeAttr = escapeHtml;
 
 function applyMenuPositions(positions = defaultMenuPositions) {
   Object.entries(positions).forEach(([slug, position]) => {
-    const button = $(`.hotspot[data-category="${slug}"]`);
+    const button = slug === 'character' ? $('#character-trigger') : $(`.hotspot[data-category="${slug}"]`);
     if (!button || !position) return;
     if (Number.isFinite(Number(position.left))) button.style.left = `${Number(position.left)}%`;
     if (Number.isFinite(Number(position.top))) button.style.top = `${Number(position.top)}%`;

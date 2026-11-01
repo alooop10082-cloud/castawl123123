@@ -30,7 +30,8 @@ export const defaultMenuPositions = {
   contacts: { left: 23.1, top: 35.8 },
   posters: { left: 46.5, top: 34 },
   clothes: { left: 18.8, top: 48.5 },
-  design: { left: 35.4, top: 46.5 }
+  design: { left: 35.4, top: 46.5 },
+  character: { left: 60, top: 33 }
 };
 
 export async function loadPortfolio() {
