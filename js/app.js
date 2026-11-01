@@ -42,6 +42,12 @@ function applyMenuPositions(positions = defaultMenuPositions) {
     : (positions?.labelPosition || { left: 50, top: 4.5 });
   if (Number.isFinite(Number(labelPosition.left))) label.style.left = `${Number(labelPosition.left)}%`;
   if (Number.isFinite(Number(labelPosition.top))) label.style.top = `${Number(labelPosition.top)}%`;
+  const speech = $('#speech-bubble');
+  const speechPosition = positions?.speechPosition?.desktop || positions?.speechPosition?.mobile
+    ? (positions.speechPosition[touchLayout ? 'mobile' : 'desktop'] || { left: 69, top: 23 })
+    : (positions?.speechPosition || { left: 69, top: 23 });
+  if (Number.isFinite(Number(speechPosition.left))) speech.style.left = `${Number(speechPosition.left)}%`;
+  if (Number.isFinite(Number(speechPosition.top))) speech.style.top = `${Number(speechPosition.top)}%`;
 }
 
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
