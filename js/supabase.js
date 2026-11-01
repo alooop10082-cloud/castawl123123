@@ -1,8 +1,11 @@
 import '../config.js';
 
 const cfg = window.PORTFOLIO_CONFIG || {};
-const hasSupabase = Boolean(cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase);
-export const client = hasSupabase ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey) : null;
+let savedConfig = {};
+try { savedConfig = JSON.parse(localStorage.getItem('portfolio.supabase') || '{}'); } catch { savedConfig = {}; }
+export const runtimeConfig = { ...cfg, ...savedConfig };
+const hasSupabase = Boolean(runtimeConfig.supabaseUrl && runtimeConfig.supabaseAnonKey && window.supabase);
+export const client = hasSupabase ? window.supabase.createClient(runtimeConfig.supabaseUrl, runtimeConfig.supabaseAnonKey) : null;
 export const isSupabaseConfigured = hasSupabase;
 
 export const fallbackCategories = [
@@ -49,5 +52,6 @@ export function imageUrl(path) {
   return path.startsWith('assets/') ? `./${path}` : `./assets/${path}`;
 }
 export async function requireSession() { if (!client) throw new Error('Supabase не настроен. Заполните config.js.'); const { data, error } = await client.auth.getSession(); if (error) throw error; return data.session; }
-export async function signIn(email, password) { if (!client) throw new Error('Supabase не настроен.'); return client.auth.signInWithPassword({ email, password }); }
+export function saveSupabaseConfig(supabaseUrl, supabaseAnonKey) { localStorage.setItem('portfolio.supabase', JSON.stringify({ supabaseUrl: supabaseUrl.trim(), supabaseAnonKey: supabaseAnonKey.trim() })); }
+export async function signIn(password) { if (!client) throw new Error('Supabase не настроен. Сохраните URL и anon key в форме настроек.'); return client.auth.signInWithPassword({ email: runtimeConfig.adminEmail || 'admin@example.com', password }); }
 export async function signOut() { return client?.auth.signOut(); }

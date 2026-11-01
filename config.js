@@ -5,6 +5,8 @@
 window.PORTFOLIO_CONFIG = {
   supabaseUrl: '',
   supabaseAnonKey: '',
+  // Email используется Supabase Auth внутри приложения и не показывается в форме входа.
+  adminEmail: 'admin@example.com',
   fallbackContacts: [
     { label: 'EMAIL', value: 'hello@example.com', href: 'mailto:hello@example.com' },
     { label: 'TELEGRAM', value: '@your_handle', href: 'https://t.me/your_handle' },
