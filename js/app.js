@@ -20,13 +20,25 @@ function escapeHtml(value='') { return String(value).replace(/[&<>"']/g, char =>
 const escapeAttr = escapeHtml;
 
 function applyMenuPositions(positions = defaultMenuPositions) {
-  Object.entries(positions).forEach(([slug, position]) => {
+  const touchLayout = window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 800;
+  const layout = positions?.desktop || positions?.mobile ? (positions[touchLayout ? 'mobile' : 'desktop'] || defaultMenuPositions) : positions;
+  Object.entries(layout).forEach(([slug, position]) => {
     const button = slug === 'character' ? $('#character-trigger') : $(`.hotspot[data-category="${slug}"]`);
     if (!button || !position) return;
     if (Number.isFinite(Number(position.left))) button.style.left = `${Number(position.left)}%`;
     if (Number.isFinite(Number(position.top))) button.style.top = `${Number(position.top)}%`;
     if (Number.isFinite(Number(position.scale))) button.style.setProperty('--scale', String(Math.max(.5, Math.min(2, Number(position.scale)))));
   });
+  const scene = $('#scene');
+  const background = positions?.backgroundScale || {};
+  scene.style.setProperty('--bg-x', `${Math.max(50, Math.min(200, Number(background.x) || 100))}%`);
+  scene.style.setProperty('--bg-y', `${Math.max(50, Math.min(200, Number(background.y) || 100))}%`);
+  const label = $('#scene-label');
+  const labelPosition = positions?.labelPosition?.desktop || positions?.labelPosition?.mobile
+    ? (positions.labelPosition[touchLayout ? 'mobile' : 'desktop'] || { left: 50, top: 4.5 })
+    : (positions?.labelPosition || { left: 50, top: 4.5 });
+  if (Number.isFinite(Number(labelPosition.left))) label.style.left = `${Number(labelPosition.left)}%`;
+  if (Number.isFinite(Number(labelPosition.top))) label.style.top = `${Number(labelPosition.top)}%`;
 }
 
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;

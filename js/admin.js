@@ -4,6 +4,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const escapeHtml = (value='') => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const categories = [{ slug:'posters', title:'Плакаты' }, { slug:'clothes', title:'Одежда' }, { slug:'design', title:'Оформление и инфографика' }, { slug:'contacts', title:'Контакты' }, { slug:'phrases', title:'Реплики' }, { slug:'menu', title:'Меню' }];
 let activeTab = 'posters';
+let activeMenuMode = 'desktop';
 
 export function openAdmin() { $('#admin-modal').hidden = false; document.body.style.overflow = 'hidden'; renderLogin(); }
 function renderLogin(message='') { $('#admin-content').innerHTML = `<div class="admin-login"><p class="admin-message">${message || (isSupabaseConfigured ? 'Введите общий пароль администратора.' : 'Сохраните Supabase URL и anon key ниже, затем обновите страницу.')}</p><form class="admin-form" id="admin-login-form"><label for="admin-password">ОБЩИЙ ПАРОЛЬ</label><input id="admin-password" type="password" required autocomplete="current-password" value="${escapeHtml(runtimeConfig.adminPassword || '1965')}" placeholder="1965"><button class="pixel-button" type="submit">ENTER CONSOLE</button></form><form class="admin-form admin-settings-form" id="supabase-config-form"><p class="eyebrow">SUPABASE SETTINGS</p><label for="supabase-url">PROJECT URL</label><input id="supabase-url" type="url" value="${escapeHtml(runtimeConfig.supabaseUrl || '')}" placeholder="https://your-project.supabase.co"><label for="supabase-anon-key">ANON PUBLIC KEY</label><textarea id="supabase-anon-key" rows="3" placeholder="eyJ...">${escapeHtml(runtimeConfig.supabaseAnonKey || '')}</textarea><button class="pixel-button" type="submit">SAVE SETTINGS</button></form></div>`; $('#admin-login-form').addEventListener('submit', async event => { event.preventDefault(); const button = event.target.querySelector('button'); button.disabled = true; try { const { error } = await signIn($('#admin-password').value || '1965'); if (error) throw error; await renderConsole(); } catch (error) { renderLogin(`Вход не выполнен: ${escapeHtml(error.message || 'проверьте пароль')}`); } }); $('#supabase-config-form').addEventListener('submit', event => { event.preventDefault(); saveSupabaseConfig($('#supabase-url').value, $('#supabase-anon-key').value); location.reload(); }); }
@@ -11,9 +12,25 @@ async function renderConsole() { try { const session = await requireSession(); i
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 async function renderPane() { const pane = $('#admin-pane'); if (activeTab === 'contacts') return renderContactsPane(pane); if (activeTab === 'phrases') return renderPhrasesPane(pane); if (activeTab === 'menu') return renderMenuPane(pane); const { data, error } = await client.from('works').select('*, categories(title), work_images(*)').eq('category_id', (await categoryId(activeTab))).order('sort_order'); if (error) return pane.innerHTML = `<p class="admin-message">${escapeHtml(error.message)}</p>`; pane.innerHTML = `<form class="admin-form" id="work-form"><input type="hidden" name="id"><label>НАЗВАНИЕ</label><input name="title" required><label>ОПИСАНИЕ</label><textarea name="description" rows="3" required></textarea><label>ФОТО (можно выбрать несколько)</label><input name="files" type="file" accept="image/*" multiple><button class="pixel-button">СОХРАНИТЬ РАБОТУ</button></form><div class="admin-list">${(data || []).map(work => `<div class="admin-row"><strong>${escapeHtml(work.title)}</strong><div class="admin-actions"><button data-edit-work="${work.id}">EDIT</button><button data-delete-work="${work.id}">DELETE</button></div></div>`).join('') || '<p class="admin-message">Работ пока нет.</p>'}</div>`; $('#work-form').addEventListener('submit', saveWork); $$('[data-delete-work]').forEach(button => button.addEventListener('click', () => deleteWork(button.dataset.deleteWork))); $$('[data-edit-work]').forEach(button => button.addEventListener('click', () => { const work = data.find(item => item.id === button.dataset.editWork); const form = $('#work-form'); form.elements.id.value = work.id; form.elements.title.value = work.title; form.elements.description.value = work.description; form.scrollIntoView({ behavior:'smooth' }); })); }
 
+function freshMenuMode() { return Object.fromEntries(Object.entries(defaultMenuPositions).map(([slug, pos]) => [slug, { ...pos }])); }
+function normalizeMenuSettings(value) {
+  const raw = value || {};
+  const legacy = !raw.desktop && !raw.mobile;
+  return {
+    desktop: { ...freshMenuMode(), ...(legacy ? raw : (raw.desktop || {})) },
+    mobile: { ...freshMenuMode(), ...(legacy ? {} : (raw.mobile || {})) },
+    backgroundScale: { x: Number(raw.backgroundScale?.x) || 100, y: Number(raw.backgroundScale?.y) || 100 },
+    labelPosition: {
+      desktop: { left: Number(raw.labelPosition?.desktop?.left ?? raw.labelPosition?.left ?? 50), top: Number(raw.labelPosition?.desktop?.top ?? raw.labelPosition?.top ?? 4.5) },
+      mobile: { left: Number(raw.labelPosition?.mobile?.left ?? raw.labelPosition?.left ?? 50), top: Number(raw.labelPosition?.mobile?.top ?? raw.labelPosition?.top ?? 4.5) }
+    }
+  };
+}
 async function renderMenuPane(pane) {
   const { data } = await client.from('settings').select('value').eq('key', 'menu_positions').maybeSingle();
-  const positions = { ...defaultMenuPositions, ...(data?.value || {}) };
+  const settings = normalizeMenuSettings(data?.value);
+  const positions = settings[activeMenuMode];
+  const labelPosition = settings.labelPosition[activeMenuMode];
   const items = [
     { slug:'contacts', title:'Контакты', icon:'icon1.png' },
     { slug:'posters', title:'Плакаты', icon:'icon2.png' },
@@ -21,60 +38,16 @@ async function renderMenuPane(pane) {
     { slug:'design', title:'Оформление', icon:'icon4.png' },
     { slug:'character', title:'Персонаж', icon:'main.png', character:true }
   ];
-  const objectMarkup = items.map(item => {
-    const pos = positions[item.slug] || defaultMenuPositions[item.slug];
-    const scale = Number(pos.scale) || 1;
-    return `<button class="admin-menu-icon${item.character ? ' admin-menu-character' : ''}" data-menu-slug="${item.slug}" style="left:${pos.left}%;top:${pos.top}%;--scale:${scale}" title="${item.title}"><img src="./assets/${item.icon}" alt="${item.title}"></button>`;
-  }).join('');
-  const scaleMarkup = items.map(item => {
-    const scale = Number(positions[item.slug]?.scale) || 1;
-    return `<label class="menu-scale-control"><span>${item.title}</span><input type="range" min="0.5" max="2" step="0.05" value="${scale}" data-menu-scale="${item.slug}"><output data-menu-scale-value="${item.slug}">${scale.toFixed(2)}×</output></label>`;
-  }).join('');
-  pane.innerHTML = `<p class="admin-message">Перетаскивайте объекты по сцене. Background растянут так же, как на сайте. Размер каждого объекта меняется отдельным слайдером.</p><div class="admin-menu-canvas" id="admin-menu-canvas">${objectMarkup}</div><div class="menu-scale-list">${scaleMarkup}</div><button class="pixel-button" id="save-menu-positions">СОХРАНИТЬ ПОЗИЦИИ И РАЗМЕРЫ</button>`;
+  const objectMarkup = items.map(item => { const pos = positions[item.slug]; const scale = Number(pos.scale) || 1; return `<button class="admin-menu-icon${item.character ? ' admin-menu-character' : ''}" data-menu-slug="${item.slug}" style="left:${pos.left}%;top:${pos.top}%;--scale:${scale}" title="${item.title}"><img src="./assets/${item.icon}" alt="${item.title}"></button>`; }).join('');
+  const scaleMarkup = items.map(item => { const scale = Number(positions[item.slug]?.scale) || 1; return `<label class="menu-scale-control"><span>${item.title}</span><input type="range" min="0.5" max="2" step="0.05" value="${scale}" data-menu-scale="${item.slug}"><output data-menu-scale-value="${item.slug}">${scale.toFixed(2)}×</output></label>`; }).join('');
+  pane.innerHTML = `<p class="admin-message">Выберите устройство. Перетаскивайте иконки, персонажа и текст «название» прямо по сцене.</p><div class="menu-layout-switch"><button class="pixel-button ${activeMenuMode === 'desktop' ? 'active' : ''}" data-layout-mode="desktop">КОМПЬЮТЕР</button><button class="pixel-button ${activeMenuMode === 'mobile' ? 'active' : ''}" data-layout-mode="mobile">ТЕЛЕФОН</button></div><div class="admin-menu-canvas" id="admin-menu-canvas" style="--bg-x:${settings.backgroundScale.x}%;--bg-y:${settings.backgroundScale.y}%">${objectMarkup}<div class="admin-menu-label" data-menu-slug="label" style="left:${labelPosition.left}%;top:${labelPosition.top}%">НАЗВАНИЕ</div></div><div class="background-scale-list"><label class="background-scale-control"><span>ФОН X</span><input type="range" min="50" max="180" step="1" value="${settings.backgroundScale.x}" data-bg-scale="x"><output data-bg-scale-value="x">${settings.backgroundScale.x}%</output></label><label class="background-scale-control"><span>ФОН Y</span><input type="range" min="50" max="180" step="1" value="${settings.backgroundScale.y}" data-bg-scale="y"><output data-bg-scale-value="y">${settings.backgroundScale.y}%</output></label></div><div class="menu-scale-list">${scaleMarkup}</div><button class="pixel-button" id="save-menu-positions">СОХРАНИТЬ КОМПОЗИЦИЮ</button>`;
   const canvas = $('#admin-menu-canvas');
-  const live = {};
-  items.forEach(item => {
-    const button = $(`[data-menu-slug="${item.slug}"]`, canvas);
-    button.addEventListener('pointerdown', event => {
-      event.preventDefault();
-      button.setPointerCapture(event.pointerId);
-      const rect = canvas.getBoundingClientRect();
-      const buttonRect = button.getBoundingClientRect();
-      const grabX = ((event.clientX - buttonRect.left) / rect.width) * 100;
-      const grabY = ((event.clientY - buttonRect.top) / rect.height) * 100;
-      const move = moveEvent => {
-        const left = Math.max(0, Math.min(96, ((moveEvent.clientX - rect.left) / rect.width) * 100 - grabX));
-        const top = Math.max(0, Math.min(96, ((moveEvent.clientY - rect.top) / rect.height) * 100 - grabY));
-        button.style.left = `${left}%`;
-        button.style.top = `${top}%`;
-      };
-      const stop = () => {
-        button.removeEventListener('pointermove', move);
-        button.removeEventListener('pointerup', stop);
-        button.removeEventListener('pointercancel', stop);
-      };
-      button.addEventListener('pointermove', move);
-      button.addEventListener('pointerup', stop);
-      button.addEventListener('pointercancel', stop);
-    });
-    const slider = $(`[data-menu-scale="${item.slug}"]`);
-    const output = $(`[data-menu-scale-value="${item.slug}"]`);
-    slider.addEventListener('input', () => {
-      button.style.setProperty('--scale', slider.value);
-      output.value = `${Number(slider.value).toFixed(2)}×`;
-      output.textContent = `${Number(slider.value).toFixed(2)}×`;
-    });
-  });
-  $('#save-menu-positions').addEventListener('click', async () => {
-    items.forEach(item => {
-      const button = $(`[data-menu-slug="${item.slug}"]`, canvas);
-      const slider = $(`[data-menu-scale="${item.slug}"]`);
-      live[item.slug] = { left: parseFloat(button.style.left), top: parseFloat(button.style.top), scale: parseFloat(slider.value) };
-    });
-    const result = await saveMenuPositions(live);
-    if (result.error) alert(result.error.message);
-    else alert('Позиции и размеры сохранены для всех посетителей.');
-  });
+  const dragObjects = [...items.map(item => ({ slug:item.slug, node:$(`[data-menu-slug="${item.slug}"]`, canvas) })), { slug:'label', node:$('[data-menu-slug="label"]', canvas) }];
+  dragObjects.forEach(({ node }) => node.addEventListener('pointerdown', event => { event.preventDefault(); node.setPointerCapture(event.pointerId); const rect = canvas.getBoundingClientRect(); const nodeRect = node.getBoundingClientRect(); const grabX = ((event.clientX - nodeRect.left) / rect.width) * 100; const grabY = ((event.clientY - nodeRect.top) / rect.height) * 100; const move = moveEvent => { node.style.left = `${Math.max(0, Math.min(96, ((moveEvent.clientX - rect.left) / rect.width) * 100 - grabX))}%`; node.style.top = `${Math.max(0, Math.min(96, ((moveEvent.clientY - rect.top) / rect.height) * 100 - grabY))}%`; }; const stop = () => { node.removeEventListener('pointermove', move); node.removeEventListener('pointerup', stop); node.removeEventListener('pointercancel', stop); }; node.addEventListener('pointermove', move); node.addEventListener('pointerup', stop); node.addEventListener('pointercancel', stop); }));
+  $$('[data-layout-mode]').forEach(button => button.addEventListener('click', async () => { activeMenuMode = button.dataset.layoutMode; await renderMenuPane(pane); }));
+  items.forEach(item => { const node = $(`[data-menu-slug="${item.slug}"]`, canvas); const slider = $(`[data-menu-scale="${item.slug}"]`); const output = $(`[data-menu-scale-value="${item.slug}"]`); slider.addEventListener('input', () => { node.style.setProperty('--scale', slider.value); output.textContent = `${Number(slider.value).toFixed(2)}×`; }); });
+  $$('[data-bg-scale]').forEach(slider => slider.addEventListener('input', () => { canvas.style.setProperty(`--bg-${slider.dataset.bgScale}`, `${slider.value}%`); $(`[data-bg-scale-value="${slider.dataset.bgScale}"]`).textContent = `${slider.value}%`; }));
+  $('#save-menu-positions').addEventListener('click', async () => { const live = {}; items.forEach(item => { const node = $(`[data-menu-slug="${item.slug}"]`, canvas); const slider = $(`[data-menu-scale="${item.slug}"]`); live[item.slug] = { left: parseFloat(node.style.left), top: parseFloat(node.style.top), scale: parseFloat(slider.value) }; }); const label = $('[data-menu-slug="label"]', canvas); const next = { ...settings, [activeMenuMode]: live, labelPosition: { ...settings.labelPosition, [activeMenuMode]: { left: parseFloat(label.style.left), top: parseFloat(label.style.top) } }, backgroundScale: { x: parseFloat($('[data-bg-scale="x"]').value), y: parseFloat($('[data-bg-scale="y"]').value) } }; const result = await saveMenuPositions(next); if (result.error) alert(result.error.message); else alert('Композиция сохранена для компьютера и телефона.'); });
 }
 async function categoryId(slug) { const { data } = await client.from('categories').select('id').eq('slug', slug).single(); return data?.id; }
 async function saveWork(event) { event.preventDefault(); const form = event.target; const id = form.elements.id.value; const category_id = await categoryId(activeTab); const payload = { title: form.elements.title.value.trim(), description: form.elements.description.value.trim(), category_id, sort_order: Date.now() }; const result = id ? await client.from('works').update(payload).eq('id', id).select().single() : await client.from('works').insert(payload).select().single(); if (result.error) return alert(result.error.message); const files = [...form.elements.files.files]; if (files.length && result.data) { for (let index = 0; index < files.length; index += 1) { const file = files[index]; const path = `${result.data.id}/${Date.now()}-${file.name.replace(/[^a-z0-9._-]/gi,'_')}`; const upload = await client.storage.from('portfolio').upload(path, file, { upsert: false }); if (!upload.error) await client.from('work_images').insert({ work_id: result.data.id, storage_path: path, sort_order: index + 1 }); } } form.reset(); await renderPane(); }
